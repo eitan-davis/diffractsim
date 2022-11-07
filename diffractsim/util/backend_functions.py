@@ -1,5 +1,6 @@
 import numpy
-
+import numba
+numba.jit
 """
 
 MPL 2.0 License 
@@ -17,6 +18,20 @@ except ImportError:
 
 global backend
 backend = numpy
+
+def cpu_accelerator(function, accelerator_name = 'numba', *args, **options):
+    """
+    This function is a decorattor on all the calculating operation 
+    to accelarate the work on the CPU with paralle prosesing 
+    when relavent (the CPU is in use).
+    """
+    #if cupy is in use then CPU accelerator will interfere with it. 
+    if backend == cupy:
+        return function
+    if accelerator_name == "numba":
+        numba.jit(function, *args, **options)
+    else:
+        return function
 
 def set_backend(name: str):
     """ Set the backend for the simulations
