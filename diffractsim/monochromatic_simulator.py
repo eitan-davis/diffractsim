@@ -32,7 +32,9 @@ class MonochromaticField:
         intensity: intensity of the field
         """
         global bd
+        global backend_name
         from .util.backend_functions import backend as bd
+        from .util.backend_functions import backend_name
         
         self.extent_x = extent_x
         self.extent_y = extent_y
@@ -235,23 +237,21 @@ class MonochromaticField:
 
     def interpolate(self, Nx, Ny):
         """Interpolate the field to the new shape (Nx,Ny)"""
-        from scipy.interpolate import interp2d
+        from scipy.interpolate import RectBivariateSpline
 
 
-        if bd != np:
+        if backend_name == 'cupy':
             self.E = self.E.get()
 
-        fun_real = interp2d(
+        fun_real = RectBivariateSpline(
                     self.dx*(np.arange(self.Nx)-self.Nx//2),
                     self.dy*(np.arange(self.Ny)-self.Ny//2),
-                    np.real(self.E),
-                    kind="cubic",)
+                    np.real(self.E))
 
-        fun_imag = interp2d(
+        fun_imag = RectBivariateSpline(
                     self.dx*(np.arange(self.Nx)-self.Nx//2),
                     self.dy*(np.arange(self.Ny)-self.Ny//2),
-                    np.imag(self.E),
-                    kind="cubic",)
+                    np.imag(self.E))
 
 
         self.Nx = Nx
@@ -306,8 +306,12 @@ class MonochromaticField:
                 self.yy/=scale_factor
 
             rgb = self.get_colors()
-            longitudinal_profile_rgb[i,:,:]  = rgb[self.Ny//2,:,:]
-            longitudinal_profile_E[i,:] = self.E[self.Ny//2,:]
+            if backend_name == 'jax':
+                longitudinal_profile_rgb = longitudinal_profile_rgb.at[i,:,:].set( rgb[self.Ny//2,:,:])
+                longitudinal_profile_E = longitudinal_profile_E.at[i,:].set(self.E[self.Ny//2,:])
+            else:
+                longitudinal_profile_rgb[i,:,:]  = rgb[self.Ny//2,:,:]
+                longitudinal_profile_E[i,:] = self.E[self.Ny//2,:]
             self.E = np.copy(self.E0)
 
 
